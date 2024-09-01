@@ -1,0 +1,173 @@
+Lab Instructions – Explore Security Group Firewall and Features
+Lab Instructions – Explore Security Group Firewall and Features
+Introduction
+This instruction complements the next video Lab – Explore Security Group Firewall and Features. I recommend watching the video first and following these instructions to complete the lab.
+
+
+For this lab, we will launch a Linux instance in the public subnet of the default VPC and configure a security group to allow ping traffic.
+
+Security Group is an instance-level firewall to control what traffic is allowed in and out of an instance
+
+After this hands-on exercise, you will have a clear understanding of why a security group is called a stateful firewall and the purpose of inbound and outbound rules
+
+Updated: April 2023 [Use Amazon Linux 2 AMI. Do not use Amazon Linux 2023]
+
+Steps
+1. Open EC2 console
+
+2. Launch an Instance
+
+3. Name the instance: FirewallTest
+
+4. We will use the Amazon Linux AMI
+
+a. Choose Amazon Linux AMI
+
+b. From AMI drop down: Select Amazon Linux 2
+
+NOTE: Do NOT use Amazon Linux 2023 AMI. This version uses a different setting for SSH and may not work correctly
+
+5. For instance type, use t2.micro or t3.micro – these are free-tier eligible instances. If you don’t see t2.micro, simply choose t3.micro
+
+6. Key pair: Specify the Keypair to Login to the machine
+
+7. Network settings - Specify VPC information
+
+a. Edit
+
+b. Network: Select default VPC
+
+c. Subnet: No preference (any public subnet in default VPC is okay)
+
+d. Auto-assign Public IP: Enable
+
+e. Create a new security group
+
+f. Security group name: PingSG
+
+g. Remove the inbound rules – Click on the Remove button
+
+h. This security group does not allow any inbound traffic
+
+8. Review and Launch
+
+9. Wait until server state is Running
+
+10. From your laptop, open the command line terminal and ping your EC2 instance’s public IP address
+
+ping PublicIP
+
+11. Ping traffic is not allowed by the Security Group, and the instance will not receive your request
+
+Steps – Update PingSG Security Group
+1. Let’s update PingSG SecurityGroup
+
+2. From the left navigation pane – select Security Groups (it is under Network & Security)
+
+3. Choose PingSG
+
+4. In the details pane, go to the Inbound Rules tab
+
+5. Edit inbound rules
+
+6. Add rule
+
+a. Type: Custom ICMP – IPv4
+
+b. Protocol: Echo Request
+
+c. Source: Anywhere IPv4
+
+d. Save rules
+
+7. From your laptop, ping your EC2 instance’s public IP address
+
+ping PublicIP
+
+8. The EC2 instance will now respond to ping requests
+
+Steps – Stateful Nature of the Firewall
+1. What will happen if we remove all the outbound rules in the security group?
+
+2. The inbound rule allows ping traffic, and we are going to remove the outbound rules
+
+3. From the left navigation pane – select Security Groups (it is under Network & Security)
+
+4. Choose PingSG
+
+5. In the details pane, go to the Outbound Rules tab
+
+6. Edit outbound rules
+
+a. Delete the outbound rule
+
+b. Save rules
+
+7. From your laptop, ping your EC2 instance’s public IP address
+
+ping PublicIP
+
+8. The server still responds to ping requests. This is because the Security Group is stateful. Since a ping request is allowed, the response is automatically allowed
+
+Steps – Why do we need Outbound rules
+1. So, what is the purpose of outbound rules?
+
+2. Let’s login to the server
+
+3. But we need to modify PingSG Security Group to allow SSH traffic
+
+4. Add a new inbound rule
+
+a. Type: SSH
+
+b. Protocol: TCP
+
+c. Port: 22
+
+d. Source: Select Anywhere
+
+e. Save rules
+
+5. Log in to the instance using Putty or SSH client
+
+6. From inside the instance, try to ping google.com
+
+ping www.google.com
+
+7. The ping request fails because the security group is not allowing any outbound traffic
+
+8. Now, let’s modify PingSG security and add an outbound rule to allow all traffic – this is the default setting
+
+a. Type: All Traffic
+
+b. Protocol: All
+
+c. Port: All
+
+d. Destination: Anywhere-IPv4
+
+e. Save rules
+
+9. From inside the instance, try to ping google.com
+
+ping www.google.com
+
+10. Now, your instance will make the ping request and receive the response
+
+Steps – Cleanup
+1. Terminate the FirewallTest instance
+
+2. Wait until the instance state is Terminated
+
+3. Delete the Security Group PingSG
+
+a. Go to Security Groups in the left navigation pane
+
+b. Select PingSG security group
+
+c. From Actions, select Delete Security Groups
+
+d. Confirm to delete
+
+Summary
+In this lab, we learned how to configure the security group firewall and observed the stateful nature of the security group. We also learned about the purpose of the outbound rules and when it applies
