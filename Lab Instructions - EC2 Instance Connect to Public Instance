@@ -1,0 +1,252 @@
+Lab Instructions - EC2 Instance Connect to Public Instance
+*** PLEASE WATCH THE VIDEOS FIRST AND THEN USE THESE INSTRUCTIONS TO COMPLETE THE LAB ***
+
+*** EC2 Instance Connect - LAB INSTRUCTIONS ***
+
+EC2 Instance Connect simplifies the process of connecting to EC2 instances by eliminating the need for managing and sharing SSH keys.
+
+Let's look at how to use EC2 Instance Connect
+
+Prerequisites:
+
+1. Download and install the latest version of AWS CLI:
+
+    https://aws.amazon.com/cli/   
+
+2. Windows Client   
+
+   a. Install OpenSSH Client
+
+   - OpenSSH is an optional feature in Windows.
+
+   - Follow the steps in the below link to install only the openssh client. The steps also show how to install openssh-server. However, we don't need server component.
+
+   https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse?tabs=gui#install-openssh-for-windows
+
+   
+
+   b. Install PowerShell AWS Tool Plugin
+
+   - Open PowerShell CLI as an admin
+
+   - Run this command
+
+     Install-Module -Name AWS.Tools.Common
+
+     
+
+   Reference: https://www.powershellgallery.com/packages/AWS.Tools.Common/4.1.361
+
+     
+
+3. Linux and MacOS Client
+
+   a. SSH tool is pre-installed in Linux and MacOS
+
+   b. Install jq package (required for parsing AWS IP ranges used by various services) 
+
+    - Amazon Linux, run the command
+
+        sudo yum install jq -y
+
+       
+
+    - MacOS, run the command
+
+        brew install jq       
+
+
+
+Objectives of Lab:
+
+-> Learn how to:
+
+    - connect to a public instance using EC2 Instance Connect
+
+    - how to use browser based login
+
+    - how to connect using SSH
+
+    - tighten security controls
+
+
+
+Steps - Quick Start:
+
+-> Login as myadmin user
+
+-> Create a new security group Instance-SSH-SG
+
+    - Allow SSH access from anywhere (we will tighten this later)   
+
+-> Launch a new EC2 instance
+
+    - Name: Public Instance
+
+    - Amazon Linux 2 AMI
+
+    - No Keypairs
+
+    - Default VPC
+
+    - Public IP Enable
+
+    - Attach Instance-SSH-SG
+
+   
+
+-> Login from Web console
+
+    - Open detail page for your public EC2 instance
+
+    - Click Connect
+
+    - Choose EC2 Instance Connect
+
+        - Connect using EC2 Instance Connect
+
+    - You are now connected to a public EC2 instance!
+
+       
+
+-> CLI - Login using Single click EC2 Instance connect Option
+
+    - You can login to the instance using SSH
+
+    - Specify your instance id and region
+
+    aws ec2-instance-connect ssh --instance-id i-0171b237b08d44d4f --profile myadmin --region us-west-2
+
+   
+
+-> CLI - Show Behind the scenes Action   
+
+    -> Generate key pair
+
+     ssh-keygen -t rsa -f my_key
+
+   
+
+    -> Push Public key to the instance using Instance Connect
+
+   
+
+    Linux and MacOS:
+
+    aws ec2-instance-connect send-ssh-public-key \
+    --region us-west-2 \
+    --instance-id i-0f1743e0feecb57d0 \
+    --instance-os-user ec2-user \
+    --ssh-public-key file://my_key.pub \
+    --profile myadmin
+   
+
+    Windows:
+
+    aws ec2-instance-connect send-ssh-public-key ^
+    --region us-west-2 ^
+    --instance-id i-0780c3044e807f3de ^
+    --instance-os-user ec2-user ^
+    --ssh-public-key file://my_key.pub ^
+    --profile myadmin
+   
+
+    -> Connect to the instace within 60 seconds and work for as long as needed. change the IP address
+
+      ssh -i my_key ec2-user@34.219.114.44
+
+   
+
+    -> need to connect within 60 seconds. temporary key access is removed after 60 seconds
+
+   
+
+    -> Verify that you cannot login after 60 seconds - you need to push the public key again to login to the instance
+
+   
+
+Steps - Tighten Security Group:
+
+-> Allow SSH access from only from specific IP Address
+
+    -> Change inbound SSH rule to allow access only from your ip address
+
+-> Test Browser based login
+
+    -> Connection fails
+
+    -> This is because browser based login uses Instance Connect Public Endpoint IP as the source to connect to your public instance
+
+    -> We need to fix the security group
+
+-> Test CLI based login
+
+    -> Connected and works!
+
+    -> CLI connects to the public instance using your IP address as the source
+
+-> Let's fix the browser based connection issue
+
+    -> We need to allow Instance connect service public IP range for that region
+
+    -> We can query from command line   
+
+    - Windows PowerShell
+
+        - Start Powershell console
+
+        - update region         
+
+        Get-AWSPublicIpAddressRange -Region us-west-2 -ServiceKey EC2_INSTANCE_CONNECT | select IpPrefix                   
+
+    - Linux/MacOS       
+
+        - update region         
+
+        curl -s https://ip-ranges.amazonaws.com/ip-ranges.json| jq -r '.prefixes[] | select(.region=="us-west-2") | select(.service=="EC2_INSTANCE_CONNECT") | .ip_prefix'
+
+     Reference: https://repost.aws/knowledge-center/ec2-instance-connect-troubleshooting 
+
+    - The above command returns:
+
+        3.16.146.0/29 for us-east-2                 
+
+        18.237.140.160/29 for us-west-2
+
+         
+
+    - Update SG to allow SSH access from Instance Connect Service Public IP Range for the region
+
+        - Add SSH rule from the above IP range   
+
+    - Now try to connect from browser based connect
+
+        - Connection succeeds!
+
+Summary:
+
+-> We looked at how to connect to a public instance using temporary keypairs
+
+-> Multiple options:
+
+    -> browser based
+
+    -> CLI single click option
+
+    -> CLI traditional tools access
+
+-> We also tightened SG rules
+
+    -> Allows connection from CLI and Browser-based connection
+
+    -> Allows access only from specific IP ranges   
+
+-> Further limit access using IAM based access control
+
+    -> Public Instance access is allowed for users who have these IAM privileges
+
+    -> ec2-instance-connect:SendSSHPublicKey action
+
+    -> ec2:DescribeInstances action
+
+    -> For finegrained access control, you can also add condition to check for tags or specific instance ids
